@@ -1,0 +1,676 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js"></script>
+
+<style>
+  @import 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css';
+  @import 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/all.min.css';
+  @import 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-pro@5.2.5/index.min.css';
+  @import 'https://cdn.jsdelivr.net/npm/@fontsource/source-code-pro@5.2.6/index.min.css';
+
+  /* Color schema */
+  html {
+    --color-fg: #335;
+    --color-bg: #CCC;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html {
+      --color-fg: #AAF;
+      --color-bg: #225;
+    }
+
+    /* Buttons */
+    .btn.btn-primary,
+    .btn.btn-secondary,
+    .btn.btn-success,
+    .btn.btn-danger,
+    .btn.btn-info,
+    .btn.btn-dark {
+      color: #FFF;
+    }
+
+    .btn.btn-warning,
+    .btn.btn-light {
+      color: #000;
+    }
+  }
+
+  /* Font and color */
+  html,
+  body,
+  #content {
+    color: var(--color-fg);
+    background-color: var(--color-bg);
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+
+  /* Document frame and borders */
+  html,
+  body {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hacky utility for spoilers without JS */
+  input[type="checkbox"].spoiler,
+  input[type="checkbox"].spoiler:not(:checked)+* {
+    display: none !important;
+  }
+
+  /* Fullscreen button */
+  .o-fullscreen {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+  }
+
+  /* Results */
+  #results {
+    margin: 5px 0;
+  }
+
+  #results .results-container {
+    display: inline-block;
+    max-width: 90%;
+    margin: 5px;
+  }
+
+  #results .results-container .result,
+  #results .results-container pre {
+    display: block;
+    width: 100%;
+  }
+
+  #results .results-container pre {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 0.5rem;
+    overflow: hidden;
+  }
+
+  #results .result>* {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  #results .result .invoker {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Vertical menu */
+  .vertical-menu {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    background-color: #000A;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .vertical-menu>*:not(.modalDisabler) {
+    /* min-width: 350px; */
+    background: var(--color-bg);
+    border-radius: 0.5rem;
+    padding: 0.5ex 0.5em;
+    z-index: 2;
+  }
+
+  .vertical-menu .modalDisabler {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background-color: transparent;
+  }
+
+  .vertical-menu hr {
+    color: var(--color-fg);
+    margin: 0 2px;
+  }
+
+  .vertical-menu .image-container {
+    min-height: 100px;
+  }
+
+  .vertical-menu .image-container img {
+    max-height: 85vh;
+    max-width: 85vw;
+    object-fit: contain;
+  }
+
+  /* Helpers */
+  .float-left {
+    float: left;
+  }
+
+  .float-right {
+    float: right;
+  }
+
+  .clearfix {
+    clear: both;
+    overflow: hidden;
+  }
+</style>
+
+<div class="container">
+  <div class="row">
+    <h1 class="col-12">[Title]</h1>
+    <div class="col-12">[IntroductionText.joinItems(" ")]</div>
+  </div>
+</div>
+
+<div class="container" id="content">
+  <!-- Main content -->
+  <div class="row">
+    <!-- Compositer -->
+    <form action="javascript:void(0);" name="Compositer" class="col-12 col-md-6 col-lg-5 col-xl-4">
+      <div class="row">
+        <!-- Prompt -->
+        <div class="col-12">
+          <label for="prompt" class="form-label">
+            <i class="fas fa-pen-to-square"></i> Prompt
+          </label>
+          <textarea class="form-control autosubmit" id="prompt" name="prompt" rows="4"></textarea>
+        </div>
+        <!-- Negative Prompt -->
+        <div class="col-12">
+          <label for="negativePrompt" class="form-label">
+            <i class="fas fa-ban"></i> Negative prompt
+          </label>
+          <textarea class="form-control autosubmit" id="negativePrompt" name="negativePrompt" rows="3"></textarea>
+        </div>
+        <!-- Resolution -->
+        <div class="col-4">
+          <label for="resolution" class="form-label">
+            <i class="fas fa-image"></i> Resolution
+          </label>
+          <select class="form-select" id="resolution" name="resolution">
+            <option value="512x768">Portrait</option>
+            <option value="768x512">Landscape</option>
+            <option value="512x512">Square</option>
+            <option value="768x768">Large square</option>
+          </select>
+        </div>
+        <!-- Scale -->
+        <div class="col-4">
+          <label for="scale" class="form-label">
+            <i class="fas fa-magnifying-glass"></i> Scale
+          </label>
+          <select class="form-select" id="scale" name="scale">
+            <option value="0.25">1/4</option>
+            <option value="0.33">1/3</option>
+            <option value="0.5">1/2</option>
+            <option value="1">1</option>
+            <option value="1.5">3/2</option>
+            <option value="2">2x</option>
+          </select>
+        </div>
+        <!-- Batch size -->
+        <div class="col-4">
+          <label for="batchSize" class="form-label">
+            <i class="fas fa-layer-group"></i> Batch size
+          </label>
+          <select class="form-select" id="batchSize" name="batchSize">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+        <!-- Advanced -->
+        <label for="advanced" class="col-12 btn btn-sm btn-secondary" style="margin-top: 0.5rem;">
+          <i class="fas fa-gear"></i> Advanced
+        </label>
+        <input type="checkbox" id="advanced" class="spoiler" />
+        <div class="col-12">
+          <div class="row">
+            <!-- Seed -->
+            <div class="col-6">
+              <label for="seed" class="form-label">
+                <i class="fas fa-seedling"></i> Seed
+              </label>
+              <input type="number" class="form-control" id="seed" name="seed" value="-1" />
+            </div>
+            <!-- Custom title -->
+            <div class="col-6">
+              <label for="saveTitle" class="form-label">
+                <i class="fas fa-file-pen"></i> Title
+              </label>
+              <input type="text" class="form-control" id="saveTitle" name="saveTitle" />
+            </div>
+            <!-- Custom description -->
+            <div class="col-12">
+              <label for="saveDescription" class="form-label">
+                <i class="fas fa-file-pen"></i> Description
+              </label>
+              <textarea class="form-control" id="saveDescription" name="saveDescription" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        <!-- Buttons -->
+        <div class="col-12" style="margin-top: 0.5rem;">
+          <div class="row">
+            <!-- GO! -->
+            <button class="col-6 btn btn-primary" id="generate" type="submit">
+              <i class="fas fa-rocket"></i> Generate
+            </button>
+            <!-- Import from previous image -->
+            <label class="col-4 btn btn-secondary">
+              <i class="fas fa-upload"></i> Import
+              <input type="file" id="import" accept="image/png" style="display: none;">
+            </label>
+            <!-- Reset form -->
+            <button class="col-2 btn btn-danger" id="reset" type="reset">
+              <i class="fas fa-recycle"></i> Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <!-- Results -->
+    <div class="col-12 col-md-6 col-lg-7 col-xl-8 text-center" id="results">
+      <i class="fas fa-info-circle"></i><br>
+      Generated images will appear here.
+      <hr>
+      Here's an example:
+      <img src="[Image]" style="width: min(90%, 512px);">
+    </div>
+  </div>
+
+  <!-- Vertical menu -->
+  <input type="checkbox" id="vertical-menu" class="spoiler" />
+  <div class="vertical-menu">
+    <label for="vertical-menu" class="modalDisabler"></label>
+    <div class="text-center">
+      <div class="clearfix">
+        <h5 class="float-left">Actions</h5>
+        <label for="vertical-menu" class="btn btn-dark btn-sm float-right">
+          <i class="fas fa-times"></i>
+        </label>
+      </div>
+      <hr>
+      <div class="image-container"></div>
+      <!-- Buttons -->
+      <div class="btn-group btn-block" role="group">
+        <button class="btn btn-success saveImage readyOnly">
+          <i class="fas fa-download"></i> Save
+        </button>
+        <button class="btn btn-danger restart">
+          <i class="fas fa-rotate-left"></i> Restart
+        </button>
+        <button class="btn btn-secondary reRun">
+          <i class="fas fa-arrows-spin"></i> Re-run
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen button -->
+  <i class="fas fa-expand btn btn-dark btn-sm o-fullscreen"></i>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+    const // App constants.
+      Image = window.Image, // Prevent Perchance custom scripts from breaking the generator.
+      $body = $('body'),
+      $form = $(document.forms.Compositer),
+      $results = $('#results'),
+      $content = $('#content'),
+      $verticalMenu = $('.vertical-menu'),
+      saveChannel = window.generatorName
+
+    let // Cross-function variables.
+      _state = {}
+
+    // Inform perchance to include the advertisement frame.
+    top.postMessage({ type: 'usingAdPoweredPlugin' }, '*')
+
+    // Fullscreen.
+    $body.on('click', '.o-fullscreen', () => {
+      if (document.fullscreenElement ?? document.webkitFullscreenElement) {
+        document.exitFullscreen()
+      } else {
+        const contentElement = $content[0]
+
+        contentElement?.requestFullscreen?.()
+          || contentElement?.webkitRequestFullscreen?.()
+          || alert('This browser does not support fullscreen.')
+      }
+    })
+
+    // Discriminates a string to convert it to a proper type.
+    const dType = function dType(value) {
+      switch (true) {
+        case (['', 'null', 'undefined'].includes(value)):
+          return null
+        case (!isNaN(value)):
+          return Number(value)
+        case (value === 'true'):
+        case (value === 'false'):
+        case (value === 'On'):
+          return ['true', 'On'].includes(value)
+        default:
+          return value
+      }
+    }
+
+    // Serialize form to JS object.
+    $.fn.serializeObject = function () {
+      const
+        data = {},
+        dataArray = this.serializeArray()
+
+      dataArray.forEach(item => {
+        const
+          name = item.name,
+          value = item.value
+
+        data[name] = dType(value)
+
+        // switch (true) {
+        //   case (['', 'null', 'undefined'].includes(value)):
+        //     return data[name] = null
+        //   case (!isNaN(value)):
+        //     return data[name] = Number(value)
+        //   case (value === 'true'):
+        //   case (value === 'false'):
+        //   case (value === 'On'):
+        //     return data[name] = ['true', 'On'].includes(value)
+        //   default:
+        //     return data[name] = value
+        // }
+      })
+
+      return data
+    }
+
+    // Canvas from image DataURL.
+    const canvasFromUrl = function imageUrl(src) {
+      return new Promise(solve => {
+        const
+          img = new Image(),
+          canvas = document.createElement('canvas'),
+          ctx = canvas.getContext('2d')
+
+        img.onload = () => {
+          canvas.width = img.width
+          canvas.height = img.height
+          ctx.drawImage(img, 0, 0)
+          solve(canvas)
+        }
+
+        img.src = src
+      })
+    }
+
+    // Handle save state to local storage.
+    const saveState = _ => {
+      const state = $form.serializeObject()
+      localStorage.setItem(saveChannel, JSON.stringify(state))
+      return state // for chaining.
+    }
+
+    // Generate a frame and it's container
+    const generateFrame = (options, ar, width) => {
+      const
+        optionsHash = encodeURI(JSON.stringify(options)),
+        frameUrl = `https://image-generation.perchance.org/embed#${optionsHash}`
+
+      if (isNaN(width)) {
+        width = Number(width.toString().replace(/[^\d]+/g, ''))
+      }
+
+      const $res = $(`
+        <div class="results-container" style="width: ${width}px;">
+          <div class="result" id="${options.iframeId}">
+            <label for="vertical-menu" class="invoker" style="aspect-ratio: ${ar};"></label>
+            <iframe src="${frameUrl}" style="aspect-ratio: ${ar};"></iframe>
+          </div>
+          <pre>Seed ${options.seed}</pre>
+        </div>
+      `)
+      $results.append($res)
+
+      const
+        $invoker = $res.find('.invoker'),
+        hh = $invoker.height()
+      $invoker.css('margin-bottom', hh * -1)
+      return $res
+    }
+
+    // On load, restore state from local storage (if any).
+    $(_ => {
+      const state = localStorage.getItem(saveChannel)
+      if (!state) return
+
+      try {
+        const oState = JSON.parse(state)
+        for (const [k, v] of Object.entries(oState)) {
+          $form.find(`[name="${k}"]`).val(v)
+        }
+      } catch (E) { }
+    })
+
+    // Form submit.
+    $form.on('submit', function (e) {
+      e.preventDefault()
+      const
+        state = saveState(),
+        randomizeSeed = (state.seed <= 0 || isNaN(state.seed))
+
+      let options = {
+        "saveChannel": saveChannel,
+        "saveTitle": state.saveTitle,
+        "saveDescription": state.saveDescription,
+        "prompt": state.prompt,
+        "resolution": state.resolution,
+        "guidanceScale": 7,
+        "defaultGuidanceScale": 7,
+        "negativePrompt": state.negativePrompt,
+        "referenceImage": null,
+        "seed": state.seed,
+      }
+
+      const
+        w = state.resolution.split('x')[0],
+        width = Math.ceil(Number(w) * state.scale),
+        ar = ({
+          "512x768": '2/3',
+          "768x512": '3/2',
+          "512x512": '1/1',
+          "768x768": '1/1',
+        })[options.resolution]
+
+      $results.empty()
+      _state.generator = _state.generator || {}
+
+      for (let i = 0; i < state.batchSize; i++) {
+        if (randomizeSeed) {
+          options.seed = Number(Math.random().toString().substring(2))
+        }
+
+        options.requestId = Math.random()
+        options.iframeId = `id${Math.random().toString().substring(2)}`
+
+        const $div = generateFrame(options, ar, width)
+
+        _state.generator[options.iframeId] = {
+          // state: options, // JS is messing this with referenced object.
+          state: Object.assign({}, options),
+          $div,
+          ready: false,
+          width,
+          ar,
+        }
+      }
+    })
+
+    // Autosubmit hotkey.
+    $form.on('keypress', '.autosubmit', function (e) {
+      if (e.keyCode === 13 && e.ctrlKey) {
+        e.preventDefault()
+        return $form.submit() && false
+      }
+    })
+
+    // Image import.
+    $form.on('change', '#import', function (e) {
+      const
+        files = e.target.files,
+        file = files[0]
+      if (!file) return
+
+      let reader = new FileReader()
+      reader.onloadend = async function () {
+        // Look for the Json boundary.
+        const
+          start = reader.result.indexOf('""JSON:'),
+          end = reader.result.indexOf(':JSON""')
+
+        if (start === -1 || end === -1 || start + 7 > end)
+          return alert('This is not an image generated by this tool.')
+
+        // const json = JSON.parse(reader.result.substring(start + 7, end))
+        let json = ''
+        try {
+          json = JSON.parse(reader.result.substring(start + 7, end))
+        } catch (E) {
+          alert('This image either is corrupted or not generated by this tool.')
+        }
+
+        // Import the JSON into the form
+        for (const [k, v] of Object.entries(json)) {
+          $form.find(`[name="${k}"]`).val(v)
+        }
+
+        $(e.target).val('')
+      }
+
+      reader.readAsBinaryString(file)
+    })
+
+    // Image ready.
+    window.addEventListener('message', async function (e) {
+      const data = e.data
+      if (data.type !== 'finished') return
+
+      // data = {
+      //   "type": "finished",
+      //   "dataUrl": "data:image/jpeg;base64,...",
+      //   "seedUsed": -1,
+      //   "id": "id1855403746538945"
+      // }
+      const
+        canvas = await canvasFromUrl(data.dataUrl),
+        dataUrl = canvas.toDataURL('image/png'),
+        options = _state.generator[data.id].state,
+        $image = $('<img>'),
+        $div = _state.generator[data.id].$div,
+        $iframe = $div.find('iframe'),
+        dataBin = atob(dataUrl.split(',')[1]),
+        optionsJson = JSON.stringify(options),
+        dataJoinedBin = `${dataBin}""JSON:${optionsJson}:JSON""`,
+        dataJoinedUrl = `data:image/png;base64,${btoa(dataJoinedBin)}`
+
+      $image.attr({
+        src: dataJoinedUrl,
+        // style: $iframe.attr('style'),
+      })
+
+      $iframe.replaceWith($image)
+      _state.generator[data.id].ready = true
+      _state.generator[data.id].$image = $image
+      // delete _state.generator[data.id].$iframe
+    })
+
+    // Menu invoker.
+    $results.on('click', '.invoker', function () {
+      const
+        $result = $(this).closest('.result'),
+        id = $result.attr('id'),
+        state = _state.generator[id]
+
+      if (!state) return
+
+      $verticalMenu.find('[disabled]').removeAttr('disabled')
+      $verticalMenu.find('.image-container').empty()
+      if (state.ready) {
+        $verticalMenu.find('.image-container').append($result.find('img').clone())
+      } else {
+        $verticalMenu.find('.btn-block .readyOnly').attr('disabled', true)
+      }
+
+      _state.openner = state
+    })
+
+    // Menu button save
+    $verticalMenu.on('click', '.btn.saveImage', async function () {
+      const state = _state.openner
+      if (!state?.ready) return
+
+      const
+        $image = state.$image,
+        a = document.createElement('a'),
+        dataUrl = $image.attr('src'),
+        dataBlob = await fetch(dataUrl).then(r => r.blob()),
+        href = URL.createObjectURL(dataBlob)
+
+      let download = (state.state.saveTitle ?? state.state.prompt)
+        .split(/[^a-z0-9]+/gi)
+      for (let i = 1; i < download.length; i++) {
+        if (download[0].length >= 25) break
+        download[0] += '_' + download[i]
+      }
+      // download = download[0]
+      const seedPart = state.state.seed.toString().substring(0, 4)
+      download = `${download[0]}-(${seedPart}).png`
+
+      $(a).attr({
+        href,
+        download,
+        target: '_blank',
+      })
+      a.click()
+    })
+
+    // Menu button restart
+    $verticalMenu.on('click', '.btn.restart', function () {
+      if (!confirm('Are you sure?')) return
+
+      const
+        state = _state.openner,
+        $div = state.$div,
+        $invoker = $div.find('.invoker'),
+        ar = state.ar,
+        width = state.width,
+        $newDiv = generateFrame(state.state, ar, width)
+      $div.replaceWith($newDiv)
+
+      state.$div = $newDiv
+      state.ready = false
+      delete state.$image
+      $('#vertical-menu').prop('checked', false)
+    })
+  })()
+</script>
+
+<!-- Umbreon, watercolor, red markings, amber eyes, black sclera, smile, anthro, spreading legs, sitting on bench, open arms. (seed:::7734954897839341) -->
+<!--  -->
